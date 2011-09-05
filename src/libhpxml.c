@@ -5,7 +5,7 @@
 #include <errno.h>
 
 #include "bstring.h"
-#include "inplace.h"
+#include "libhpxml.h"
 
 
 static size_t hpx_lineno_;
@@ -118,9 +118,9 @@ int hpx_parse_attr_list(bstring_t *b, hpx_tag_t *t)
  * out.
  * @return Returns 0 if the bstring could be successfully parsed, otherwise -1.
  */
-int hpx_process_elem(bstring_t b, int in, hpx_tag_t *p)
+int hpx_process_elem(bstring_t b, hpx_tag_t *p)
 {
-   if (!in)
+   if (b.len && (*b.buf != '<'))
    {
       p->type = HPX_LITERAL;
       p->tag = b;
@@ -128,10 +128,6 @@ int hpx_process_elem(bstring_t b, int in, hpx_tag_t *p)
    }
 
    p->type = HPX_ILL;
-
-   // just to be on the safe side
-   if (b.len && (*b.buf != '<'))
-      return -1;
 
    if (!bs_advance(&b))
       return -1;
@@ -549,9 +545,9 @@ int main(int argc, char *argv[])
 
    while (hpx_get_elem(ctl, &b, &in, &lno) > 0)
    {
-      if (!hpx_process_elem(b, in, tag))
+      if (!hpx_process_elem(b, tag))
       {
-         printf("%d: ", tag->type);
+         printf("[%ld] %d: ", lno, tag->type);
          fwrite(tag->tag.buf, tag->tag.len, 1, stdout);
          printf("\n");
       }

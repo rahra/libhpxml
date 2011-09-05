@@ -1,0 +1,229 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+   <head>
+      <meta name="author" content="Bernhard R. Fischer">
+      <meta name="date" content="2011-09-05T16:52:00+0200">
+      <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+      <title>libhpxml &ndash; A High Performance XML Stream Parser</title>
+      <style type="text/css">
+         p { text-align:justify; }
+      </style>
+   </head>
+   <body>
+      <h1>libhpxml &ndash; A High Performance XML Stream Parser</h1>
+      <h2>Download</h2>
+      libhpxml currently is not a shared library. It is provided as a set of source files and can directly be compiled and linked into you project with GCC.
+      The current version is <a href="">available here</a>.
+      <h2>Description</h2>
+      <p>
+      libhpxml is a high performance XML stream parser library written in C. It is intended to parse
+      an XML file very speed efficient. This may be required when processing huge XML files
+      like the <a href="http://wiki.openstreetmap.org/wiki/Planet.osm">OSM planet file</a> which 
+      currently has 250GB+.
+      <br>
+      The development goals are <span style="font-weight:bold">speed efficiency</span> and <span style="font-weight:bold">simple memory handling</span> to reduce the risk of
+      memory leaks.
+      These objectives are achieved through
+      </p>
+
+      <ul>
+         <li>avoidance of system calls (such as <span style="font-family:monospace">malloc()</span>) as much as possible,</li>
+         <li>usage of (nearly) static memory buffers, and</li>
+         <li>avoidance of copying memory.</li>
+      </ul>
+
+      <p>
+      Being a stream parser, libhpxml returns in a loop one XML element after the other. It uses a
+      result buffer which is initialized once and then reused for every element. Thus, repeated calls to 
+      <span style="font-family:monospace">malloc()</span> and <span style="font-family:monospace">free()</span> are omitted. The input data is read
+      in blocks. The result buffer does not contain the data itself but just pointers to the XML elements
+      within the input buffer. Thus, data is not copied, it is just pointed to.
+      </p>
+
+      <h2>Usage</h2>
+
+      <h3>Initialization</h3>
+      <p>
+      libhpxml provides a set of functions and structures. <span
+         style="font-family:monospace">hpx_ctrl_t</span> is a control structure which
+         contains all relevant information for a XML stream. The contents of
+         the structure are used internally by the library and should not be
+         modified in any way. The structure is initialized with a call to
+         <span style="font-family:monospace">hpx_init()</span> and must be freed again
+         with <span style="font-family:monospace">hpx_free()</span>.
+         </p>
+         <pre>
+   hpx_ctrl_t *hpx_init(int fd, int len);
+   void hpx_free(hpx_ctrl_t *ctl);
+</pre>
+         <p>
+         The arguments to <span style="font-family:monospace">hpx_init()</span> is a file descriptor to an open XML file and the length
+            of the block buffer. It will initialize a <span style="font-family:monospace">hpx_ctrl_t</span> structure and returns a pointer to it,
+            or <span style="font-family:monospace">NULL</span> in case of error. The buffer size must be at least as large as the longest XML element
+         in the file but it is recommended to much larger. The larger the buffer the lesser
+         the number of reads. If there is enough system memory available, it is safe to choose 100MB or even more.
+         </p>
+
+         <h3>Supporting Functions</h3>
+         <p>
+         While parsing an XML file libhpxml returns pointers to the elements and attributes.
+         C strings are usually '\0'-terminated but this is not applicable here because it would
+         require that '\0' characters are inserted after each element, resulting in huge data
+         movement. Thus, libhpxml uses "B strings" which are hold in the <span style="font-family:monospace">bstring_t</span> structure. The structure containes a pointer to the string and its length. Additionally, a
+         set of function is provided to handle those strings.
+         </p>
+   <pre>
+   typedef struct bstring
+   {
+      int len;
+      char *buf;
+   } bstring_t;
+   </pre>
+
+         <h3>Processing Elements</h3>
+         <p>
+         After initializing the control structure, XML elements are subsequently retrieved by repeated calls 
+         to <span style="font-family:monospace">hpx_get_elem()</span>.
+         </p>
+         <pre>
+   int hpx_get_elem(hpx_ctrl_t *ctl, bstring_t *b, int *in_tag, size_t *lno);
+</pre>
+         <p>
+         The function processes the buffer and fills out the bstring pointing to
+         the next XML element. <span style="font-family:monospace">ctl</span> is the pointer to control structure. <span style="font-family:monospace">in_tag</span>
+         is filled with either 0 or 1, either if the XML element is a tag
+         (&lt;...&gt;) or if it is literal text between tags. <span style="font-family:monospace">lno</span> is filled
+         with the line number at which this element starts. lno may be NULL if
+         it is not used. <span style="font-family:monospace">hpx_get_elem()</span> returns the length of the bstring, 0 on EOF, and -1 in case of error.
+         Such an element can now be parsed with a call to <span style="font-family:monospace">hpx_process_elem()</span>.
+         </p>
+         <pre>
+   int hpx_process_elem(bstring_t b, hpx_tag_t *p);
+
+   typedef struct hpx_tag
+   {
+      bstring_t tag;       // name of tag
+      int type;            // type of tag
+      int nattr;           // number of attributes
+      int mattr;           // size of attr array
+      hpx_attr_t attr[];   // array containing attributes
+   } hpx_tag_t;
+
+   typedef struct hpx_attr
+   {
+      bstring_t name;   //! name of attribute
+      bstring_t value;  //! value of attribute
+      char delim;       //! delimiter character of attribute value
+   } hpx_attr_t;
+
+</pre>
+         <p>
+         It takes a bstring which contains an XML element and parses it into
+         the <span style="font-family:monospace">hpx_tag_t</span> structure. This structure may be initialized using
+            <span style="font-family:monospace">hpx_tm_create()</span> but it may also be initialized manually. In the latter
+            case the structure member <span style="font-family:monospace">mattr</span> must contain the size of the attribute
+            array. Otherwise the program may segfault. The argument to <span
+               style="font-family:monospace">hpx_tm_create()</span> is the
+            maximum number of expected attributes. The tag structure should be
+            freed again with <span style="font-family:monospace">hpx_tm_free()</span> after use. It is recommended to
+            reuse the tag structure. This reduces unnecessary memory management
+            system calls.
+            <br>
+            Please note that a call to <span style="font-family:monospace">hpx_get_elem()</span> may invalidate the
+            pointers within the tag structure because it might read in the
+            next block of the input file. Thus, the tag must be processed
+            before the next call to <span style="font-family:monospace">hpx_get_elem()</span>.
+            <br>
+            The <span style="font-family:monospace">type</span> member of <span style="font-family:monospace">hpx_tag_t</span>
+            defines the type this XML element.
+            Currently, the following types are known.
+            <table>
+               <tr><td>enum</td><td>Description</td><td>Example</td></tr>
+               <tr><td style="font-family:monospace">HPX_ILL</td><td>Element unknown. This may indicate a syntax error.</td></tr>
+               <tr><td style="font-family:monospace">HPX_OPEN</td><td>An XML opening tag.</td><td style="font-family:monospace">&lt;tagname attrname="attrval"...&gt;</td></tr>
+               <tr><td style="font-family:monospace">HPX_SINGLE</td><td>A single, closed XML tag.</td><td style="font-family:monospace">&lt;tagname attrname="attrval".../&gt;</td></tr>
+               <tr><td style="font-family:monospace">HPX_CLOSE</td><td>An XML closing tag.</td><td style="font-family:monospace">&lt;/tagname&gt;</td></tr>
+               <tr><td style="font-family:monospace">HPX_LITERAL</td><td>No tag, just text between tags.</td><td style="font-family:monospace"></td></tr>
+               <tr><td style="font-family:monospace">HPX_ATT</td><td>Declarations.</td><td style="font-family:monospace">&lt;! ..... &gt;</td></tr>
+               <tr><td style="font-family:monospace">HPX_INSTR</td><td>Instructions.</td><td style="font-family:monospace">&lt;? .... ?&gt;</td></tr>
+               <tr><td style="font-family:monospace">HPX_COMMENT</td><td>Comments.</td><td style="font-family:monospace">&lt;!-- .... --&gt;</td></tr>
+            </table>
+
+         </p>
+<pre>
+   hpx_tag_t *hpx_tm_create(int n);
+   void hpx_tm_free(hpx_tag_t *t);
+</pre>
+
+         <h2>Example</h2>
+<pre>
+#include &lt;stdio.h>
+
+#include "bstring.h"
+#include "inplace.h"
+
+
+int main(int argc, char *argv[])
+{
+   hpx_ctrl_t *ctl;
+   hpx_tag_t *tag;
+   bstring_t b;
+   int in;
+   size_t lno;
+
+   // initialize control structure, stdin, 100MB buffer
+   if ((ctl = hpx_init(0, 100*1024*1024)) == NULL)
+      perror("hpx_init_simple"), exit(EXIT_FAILURE);
+   // initialize tag structure with maximum 16 attributes
+   if ((tag = hpx_tm_create(16)) == NULL)
+      perror("hpx_tm_create"), exit(EXIT_FAILURE);
+
+   // loop as long as XML elements are available
+   while (hpx_get_elem(ctl, &b, &in, &lno) > 0)
+   {
+      // parse XML element
+      if (!hpx_process_elem(b, tag))
+      {
+         // element successfully parsed, do something with it
+         // ...
+         // ...
+
+         printf("[%ld] type=%d, name=%.*s, nattr=%d\n", lno, tag->type, tag->tag.len, tag->tag.buf, tag->nattr);
+      }
+      else
+         printf("[%ld] ERROR in element: %.*s\n", lno, b.len, b.buf);
+   }
+
+   if (!ctl->eof)
+      perror("hpx_get_elem"), exit(EXIT_FAILURE);
+
+   hpx_tm_free(tag);
+   hpx_free(ctl);
+
+   exit(EXIT_SUCCESS);
+}
+</pre>
+
+
+      <h2>Bugs and Caveats</h2>
+      <p>
+      libhpxml does not validate the XML file using e.g. DTD. Thus, it does not
+      care about semantical errors. Syntactical ones of course are reported.
+      In the current version, libhpxml is not thread-safe. The interface to the 
+      functions may change because it is in early development.
+
+      </p>
+
+      <h2>Author</h2>
+      <p>
+      libhpxml is developed and maintained by <a href="mailto:bf@abenteuerand.at">Bernhard R. Fischer, 2048R/5C5FFD47 &lt;bf@abenteuerland.at&gt;</a>.
+      </p>
+
+      <h2>License</h2>
+      <p>
+      libhpxml is released and GNU GPLv3.
+      </p>
+
+   </body>
+</html>
+
