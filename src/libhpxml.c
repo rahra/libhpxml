@@ -403,6 +403,8 @@ void hpx_free(hpx_ctrl_t *ctl)
  *  @param ctl Pointer to valid hpx_ctrl_t structure.
  *  @param b Pointer to bstring_t. This structure will be filled out by this
  *  function.
+ *  @param in_tag is set to 1 or 0, either it is a tag or not. It is optional
+ *  and may be NULL.
  *  @param lno Pointer to integer which will contain the starting line number
  *  of b. lno may be NULL.
  *  @return Length of element (always >= 1) if everything is ok. b will contain
@@ -450,7 +452,8 @@ int hpx_get_elem(hpx_ctrl_t *ctl, bstring_t *b, int *in_tag, size_t *lno)
 
       if ((s = hpx_proc_buf(ctl, b, lno)) >= 0)
       {
-         *in_tag = ctl->in_tag;
+         if (in_tag != NULL)
+            *in_tag = ctl->in_tag;
 
          ctl->in_tag ^= 1;
          ctl->pos += s;
