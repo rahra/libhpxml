@@ -93,7 +93,7 @@
          the next XML element. <span style="font-family:monospace">ctl</span> is the pointer to control structure. <span style="font-family:monospace">in_tag</span>
          is filled with either 0 or 1, either if the XML element is a tag
          (&lt;...&gt;) or if it is literal text between tags. <span style="font-family:monospace">lno</span> is filled
-         with the line number at which this element starts. lno may be NULL if
+         with the line number at which this element starts. Both, <span style="font-family:monospace">in_tag</span> and <span style="font-family:monospace">lno</span> may be <span style="font-family:monospace">NULL</span> if
          it is not used. <span style="font-family:monospace">hpx_get_elem()</span> returns the length of the bstring, 0 on EOF, and -1 in case of error.
          Such an element can now be parsed with a call to <span style="font-family:monospace">hpx_process_elem()</span>.
          </p>
@@ -155,55 +155,38 @@
    void hpx_tm_free(hpx_tag_t *t);
 </pre>
 
+<p>
+The tag structure further contains an array of attributes. The member <span style="font-family:monospace">nattr</span>
+contains the actual number of attributes parsed. It is always at most <span style="font-family:monospace">mattr</span>
+elements. If an XML tag has more than <span style="font-family:monospace">mattr</span> elements they are just ignored. At the current version there's no feedback to the calling function. This will be improved in future releases.
+The attributes themselves are stored each in an <span style="font-family:monospace">hpx_attr_t</span> structure. It contains two bstrings, one for the name and one for the value of the attribute. The third member <span style="font-family:monospace">delim</span> keeps the delimitor of the value which is either '\'' (single quote, 0x27) or '"' (double quote, 0x22).
+</p>
+
          <h2>Example</h2>
-<pre>
-#include &lt;stdio.h>
 
-#include "bstring.h"
-#include "libhpxml.h"
+      <p>
+      This example parses an XML file and outputs some stats about each XML element.
+      You can download the example <a href="example.c">directly here</a>.
+      </p>
+
+<?php
 
 
-int main(int argc, char *argv[])
+$gs = "geshi/geshi.php";
+$s = file_get_contents("example.c");
+
+if (file_exists($gs))
 {
-   hpx_ctrl_t *ctl;
-   hpx_tag_t *tag;
-   bstring_t b;
-   int in;
-   size_t lno;
-
-   // initialize control structure, stdin, 100MB buffer
-   if ((ctl = hpx_init(0, 100*1024*1024)) == NULL)
-      perror("hpx_init_simple"), exit(EXIT_FAILURE);
-   // initialize tag structure with maximum 16 attributes
-   if ((tag = hpx_tm_create(16)) == NULL)
-      perror("hpx_tm_create"), exit(EXIT_FAILURE);
-
-   // loop as long as XML elements are available
-   while (hpx_get_elem(ctl, &b, &in, &lno) > 0)
-   {
-      // parse XML element
-      if (!hpx_process_elem(b, tag))
-      {
-         // element successfully parsed, do something with it
-         // ...
-         // ...
-
-         printf("[%ld] type=%d, name=%.*s, nattr=%d\n", lno, tag->type, tag->tag.len, tag->tag.buf, tag->nattr);
-      }
-      else
-         printf("[%ld] ERROR in element: %.*s\n", lno, b.len, b.buf);
-   }
-
-   if (!ctl->eof)
-      perror("hpx_get_elem"), exit(EXIT_FAILURE);
-
-   hpx_tm_free(tag);
-   hpx_free(ctl);
-
-   exit(EXIT_SUCCESS);
+   require_once("geshi/geshi.php");
+   $h = new GeSHi($s, "C");
+   echo $h->parse_code();
 }
-</pre>
+else
+{
+   echo "<pre>$s</pre>";
+}
 
+?>
 
       <h2>Bugs and Caveats</h2>
       <p>

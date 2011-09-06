@@ -1,5 +1,22 @@
-#ifndef INPLACE_H
-#define INPLACE_H
+/* Copyright 2011 Bernhard R. Fischer, 2048R/5C5FFD47 <bf@abenteuerland.at>
+ *
+ * This file is part of libhpxml.
+ *
+ * Libhpxml is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3 of the License.
+ *
+ * Libhpxml is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with libhpxml. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef HPXML_H
+#define HPXML_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,9 +51,9 @@ typedef struct hpx_ctrl
 
 typedef struct hpx_attr
 {
-   bstring_t name;
-   bstring_t value;
-   char delim;
+   bstring_t name;   //! name of attribute
+   bstring_t value;  //! value of attribute
+   char delim;       //! delimiter character of attribute value
 } hpx_attr_t;
 
 typedef struct hpx_tag
@@ -66,7 +83,7 @@ enum
 size_t hpx_lineno(void);
 void hpx_tm_free(hpx_tag_t *t);
 hpx_tag_t *hpx_tm_create(int n);
-int hpx_process_elem(bstring_t b, int in, hpx_tag_t *p);
+int hpx_process_elem(bstring_t b, hpx_tag_t *p);
 hpx_ctrl_t *hpx_init(int fd, int len);
 void hpx_free(hpx_ctrl_t *ctl);
 int hpx_get_elem(hpx_ctrl_t *ctl, bstring_t *b, int *in_tag, size_t *lno);
