@@ -402,6 +402,7 @@ hpx_ctrl_t *hpx_init(int fd, int len)
    ctl->buf.buf = (char*) (ctl + 1);
    ctl->len = len;
    ctl->empty = 1;
+   ctl->fd = fd;
  
    // init line counter
    hpx_lineno_ = 1;

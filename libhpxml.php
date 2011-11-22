@@ -20,7 +20,7 @@ GCC.
       The current version is <a href="">available here</a>.
       <h2>Description</h2>
       <p>
-      libhpxml is a high performance XML stream parser library written in C. It
+      libhpxml is a high performance XML stream parser library written in C with a simple API. It
 is intended to parse
       an XML file very speed efficient. This may be required when processing
 huge XML files
