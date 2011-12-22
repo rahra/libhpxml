@@ -49,7 +49,7 @@ int bs_advance2(bstring_t *b)
 
 
 /*! bs_ncmp compares exactly n bytes of b and s. If they are equal, 0 is
- * returned. If they are not equal, the return value of strncmp(3) is returnd.
+ * returned. If they are not equal, the return value of strncmp(3) is returned.
  * If the string length of either is less then n, -2 is returned.
  */
 int bs_ncmp(bstring_t b, const char *s, int n)
