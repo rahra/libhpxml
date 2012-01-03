@@ -16,7 +16,7 @@
 # */
 
 CC			= gcc
-CFLAGS	= -Wall
+CFLAGS	= -Wall -DWITH_MMAP
 
 libhpxml.a: libhpxml.o bstring.o
 	ar cr libhpxml.a libhpxml.o bstring.o
