@@ -17,7 +17,7 @@
 of
 source files and can directly be compiled and linked into your project with
 GCC.
-      The current version is <a href="/download/libhpxml/">available here</a>.
+      The current version is <a href="download/">available here</a>.
       <h2>Description</h2>
       <p>
       libhpxml is a high performance XML stream parser library written in C with a simple API. It
