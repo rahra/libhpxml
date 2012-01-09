@@ -30,12 +30,7 @@
 
 #define hpx_init_simple() hpx_init(0, 10*1024*1024)
 
-
-struct bstringl
-{
-   long len;
-   char *buf;
-};
+#define MMAP_PAGES (1 << 15)
 
 
 typedef struct hpx_ctrl
@@ -46,7 +41,7 @@ typedef struct hpx_ctrl
    //! file descriptor of input file
    int fd;
    //! flag set if eof
-   int eof;
+   short eof;
    //! total length of buffer
    long len;
    //! current working position
@@ -54,7 +49,15 @@ typedef struct hpx_ctrl
    //! flag to deter if next element is in or out of tag
    int in_tag;
    //! flag set if data should be read from file
-   int empty;
+   short empty;
+   //! flag set if data is memory mapped
+   short mmap;
+   //! pointer to madvise()'d region (MADV_WILLNEED)
+   char *madv_ptr;
+   //! system page size
+   long pg_siz;
+   //! length of advised region (multiple of sysconf(_SC_PAGESIZE))
+   long pg_blk_siz;
 } hpx_ctrl_t;
 
 typedef struct hpx_attr
@@ -95,6 +98,7 @@ int hpx_process_elem(bstring_t b, hpx_tag_t *p);
 hpx_ctrl_t *hpx_init(int fd, long len);
 void hpx_free(hpx_ctrl_t *ctl);
 int hpx_get_elem(hpx_ctrl_t *ctl, bstring_t *b, int *in_tag, long *lno);
+long hpx_get_eleml(hpx_ctrl_t *ctl, bstringl_t *b, int *in_tag, long *lno);
 int hpx_fprintf_tag(FILE *f, const hpx_tag_t *p);
 int hpx_tree_resize(hpx_tree_t **tl, int n);
 
