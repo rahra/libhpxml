@@ -3,7 +3,7 @@
 <html>
    <head>
       <meta name="author" content="Bernhard R. Fischer">
-      <meta name="date" content="2011-09-05T16:52:00+0200">
+      <meta name="date" content="2012-01-09T12:06:00+0200">
       <meta http-equiv="content-type" content="text/html; charset=UTF-8">
       <title>libhpxml &ndash; A High Performance XML Stream Parser</title>
       <style type="text/css">
@@ -15,17 +15,17 @@
       <h2>Download</h2>
       libhpxml currently is not a shared library. It is provided as a set
 of
-source files and can directly be compiled and linked into you project with
+source files and can directly be compiled and linked into your project with
 GCC.
-      The current version is <a href="">available here</a>.
+      The current version is <a href="/download/libhpxml/">available here</a>.
       <h2>Description</h2>
       <p>
       libhpxml is a high performance XML stream parser library written in C with a simple API. It
 is intended to parse
-      an XML file very speed efficient. This may be required when processing
+      XML files very speed efficient. This may be required when processing
 huge XML files
       like the <a href="http://wiki.openstreetmap.org/wiki/Planet.osm">OSM
-planet file</a> which currently has 250GB+.
+planet file</a> which currently has 260GB+.
       <br>
       The development goals are <span style="font-weight:bold">speed
 efficiency</span> and
@@ -70,6 +70,7 @@ which
 freed
 again
          with <span style="font-family:monospace">hpx_free()</span>.
+Note that <span style="font-family:monospace">hpx_free()</span> will not close the file descriptor.
          </p>
          <pre>
    hpx_ctrl_t *hpx_init(int fd, int len);
@@ -80,16 +81,47 @@ again
 is a file descriptor to an open XML file and the length
             of the block buffer. It will initialize a <span
 style="font-family:monospace">hpx_ctrl_t</span> structure and returns a pointer
-to it,
-            or <span style="font-family:monospace">NULL</span> in case of 
-error.
+to it. In case of error <span style="font-family:monospace">NULL</span> 
+is returned and <span style="font-family:monospace">errno</span> is set appropriately.
 The buffer size must be at least as large as the longest XML element
-         in the file but it is recommended to much larger. The larger the 
+         in the file but it is recommended to be much larger. The larger the 
 buffer
 the lesser
          the number of reads. If there is enough system memory available, it is
 safe to choose 100MB or even more.
          </p>
+<h4 id="mmap">Memory Mapping</h4>
+
+<p>
+Libhpxml now supports memory mapping through the system call
+<span style="font-family:monospace">mmap()</span>. This is activated if 
+<span style="font-family:monospace">hpx_init()</span> is called with a negative
+<span style="font-face:underline;">len</span> parameter. In case of memory mapping, len must
+be as long as the (negative value) of the total length of the XML input file.
+Memory mapping of files greater than 2 GB is currently just supported on 64 bit architectures
+(see manpage <span style="font-family:monospace">mmap(2)</span> or POSIX manpage
+<span style="font-family:monospace">mmap(3)</span>, respectively).
+</p>
+<p>
+The main application for memory mapping is if libhpxml is not just used as stream parser but
+XML objects are kept in memory during the whole runtime. This is necessary if on-the-fly object
+processing is not possible. This typically is the case if XML objects are nested or they depend
+on each other. An example is the rendering process of OSM data.
+<br>
+Keeping pointers valid (see <a href="#hpx_get_elem"><span style="font-family:monospace">hpx_get_elem()</span></a>)
+is still possible without memory mapping, but it requires that the buffer
+is as large as the file itself because it has to pull in the whole file at once. Thus, this
+works just if the system has enough memory. Memory mapping in contrast does not require physical memory,
+hence, even a file with several hundred GB may be used.
+<br>
+Note that the preprocessor macro <span style="font-family:monospace">WITH_MMAP</span>
+must be defined at compile time to compile libhpxml with <span style="font-family:monospace">mmap()</span> 
+support.
+If it was not compiled with <span style="font-family:monospace;">WITH_MMAP</span>, <span style="font-family:monospace">hpx_init()</span> 
+will fail, in which case <span style="font-family:monospace;">NULL</span> is returned
+and <span style="font-family:monospace;">errno</span> is set to
+<span style="font-family:monospace;">EINVAL</span>.
+</p>
 
          <h3>Supporting Functions</h3>
          <p>
@@ -118,8 +150,8 @@ contains a pointer to the string and its length. Additionally, a
          <p>
          After initializing the control structure, XML elements are 
 subsequently
-retrieved by repeated calls to <span 
-style="font-family:monospace">hpx_get_elem()</span>.
+retrieved by repeated calls to <a id="hpx_get_elem"><span 
+style="font-family:monospace">hpx_get_elem()</span></a>.
          </p>
          <pre>
    int hpx_get_elem(hpx_ctrl_t *ctl, bstring_t *b, int *in_tag, size_t *lno);
@@ -184,9 +216,9 @@ to
             <br>
             Please note that a call to <span
 style="font-family:monospace">hpx_get_elem()</span> may invalidate the
-            pointers within the tag structure because it might read in the
+            pointers within previously filled-out tag structures because it might read in the
             next block of the input file. Thus, the tag must be processed
-            before the next call to <span
+            <span style="font-weight:bold;">before</span> the next call to <span
 style="font-family:monospace">hpx_get_elem()</span>.
             <br>
             The <span style="font-family:monospace">type</span> member of <span
@@ -291,6 +323,8 @@ course, it does not exhaust it).
       libhpxml is developed and maintained by <a
 href="mailto:bf@abenteuerand.at">Bernhard R. Fischer, 2048R/5C5FFD47
 &lt;bf@abenteuerland.at&gt;</a>.
+<br>
+Latest update 2012/01/09.
       </p>
 
       <h2>License</h2>
