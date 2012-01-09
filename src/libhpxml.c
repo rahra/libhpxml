@@ -467,6 +467,11 @@ hpx_ctrl_t *hpx_init(int fd, long len)
 
 void hpx_free(hpx_ctrl_t *ctl)
 {
+#ifdef WITH_MMAP
+   if (ctl->mmap)
+      // FIXME returned code should be checked
+      (void) munmap(ctl->buf.buf, ctl->len);
+#endif
    free(ctl);
 }
 

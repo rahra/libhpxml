@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 
    // initialize control structure, stdin, 100MB buffer
    if ((ctl = hpx_init(0, 100*1024*1024)) == NULL)
-      perror("hpx_init_simple"), exit(EXIT_FAILURE);
+      perror("hpx_init"), exit(EXIT_FAILURE);
    // initialize tag structure with maximum 16 attributes
    if ((tag = hpx_tm_create(16)) == NULL)
       perror("hpx_tm_create"), exit(EXIT_FAILURE);
