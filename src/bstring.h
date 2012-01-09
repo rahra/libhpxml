@@ -19,14 +19,26 @@
 #define BSTRING_H
 
 
+typedef struct bstrings
+{
+   short len;
+   char *buf;
+} bstrings_t;
+
 typedef struct bstring
 {
    int len;
    char *buf;
 } bstring_t;
 
+typedef struct bstringl
+{
+   long len;
+   char *buf;
+} bstringl_t;
 
 int bs_advance(bstring_t *);
+int bs_advancel(bstringl_t *);
 int bs_advance2(bstring_t *);
 int bs_ncmp(bstring_t b, const char *s, int n);
 int bs_cmp(bstring_t b, const char *s);

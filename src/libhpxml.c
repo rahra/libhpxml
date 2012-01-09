@@ -17,6 +17,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -43,7 +44,7 @@ long hpx_lineno(void)
  */
 int skip_bblank(bstring_t *b)
 {
-   for (; isblank(*b->buf) && b->len; bs_advance(b));
+   for (; isspace(*b->buf) && b->len; bs_advance(b));
    return b->len;
 }
 
@@ -272,7 +273,9 @@ int cblank(char *c)
          hpx_lineno_++;
       case '\t':
       case '\r':
+#ifdef MODMEM
          *c = ' ';
+#endif
       case ' ':
          return 0;
    }
@@ -307,7 +310,7 @@ int cblank1(const char *c)
  *  @return Lendth of tag content including '<' and '>'. If return value > len,
  *  the tag is unclosed.
  */
-int count_tag(bstring_t b)
+int count_tag(bstringl_t b)
 {
    int i, c = 0;
 
@@ -337,7 +340,7 @@ int count_tag(bstring_t b)
  *  @param nbc Pointer to integer which counts non-blank characters.
  *  @return Length of literal. Return value == len if literal is unclosed.
  */
-int count_literal(bstring_t b, int *nbc)
+int count_literal(bstringl_t b, int *nbc)
 {
    int i, t;
 
@@ -365,7 +368,7 @@ int count_literal(bstring_t b, int *nbc)
  *  element. lno may be NULL.
  *  @return Length of element or -1 if element is unclosed.
  */
-int hpx_proc_buf(hpx_ctrl_t *ctl, bstring_t *b, long *lno)
+int hpx_proc_buf(hpx_ctrl_t *ctl, bstringl_t *b, long *lno)
 {
    int i, s, n;
 
@@ -382,7 +385,7 @@ int hpx_proc_buf(hpx_ctrl_t *ctl, bstring_t *b, long *lno)
    {
       // skip leading white spaces
       for (i = 0; i < b->len && !cblank(b->buf); i++)
-         bs_advance(b);
+         bs_advancel(b);
       if (i == b->len)
          return -1;
 
@@ -394,7 +397,8 @@ int hpx_proc_buf(hpx_ctrl_t *ctl, bstring_t *b, long *lno)
          return -1;
 
       // cut trailing white spaces
-      for (b->len = s; b->len && (b->buf[b->len - 1] == ' '); b->len--);
+      //for (b->len = s; b->len && (b->buf[b->len - 1] == ' '); b->len--);
+      for (b->len = s; b->len && isspace(b->buf[b->len - 1]); b->len--);
 
       s += i;
    }
@@ -411,9 +415,13 @@ int hpx_buf_reader(int fd, char *buf, int buflen)
 
 /*!
  *  @param fd Input file descriptor.
- *  @param len Read buffer length. If len is negative, the file is memory mapped
- *  with mmap(). This works only if it was compiled with WITH_MMAP.
+ *  @param len Read buffer length. If len is negative, the file is memory
+ *  mapped with mmap(). This works only if it was compiled with WITH_MMAP.
  *  @param mattr Maximum number of attributes per tag.
+ *  @return Pointer to allocated hpx_ctrl_t structure. On error NULL is
+ *  returned and errno is set. If compiled without WITH_MMAP and hpx_init() is
+ *  called with negative len parameter, NULL is returned and errno is set to
+ *  EINVAL.
  */
 hpx_ctrl_t *hpx_init(int fd, long len)
 {
@@ -431,13 +439,19 @@ hpx_ctrl_t *hpx_init(int fd, long len)
    {
 #ifdef WITH_MMAP
       ctl->len = ctl->buf.len = -len;
-      if ((ctl->buf.buf = mmap(NULL, ctl->len, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
+      if ((ctl->buf.buf = mmap(NULL, ctl->len, PROT_READ, MAP_PRIVATE | MAP_NORESERVE, fd, 0)) == MAP_FAILED)
       {
          free(ctl);
          return NULL;
       }
+      ctl->mmap = 1;
+      ctl->madv_ptr = ctl->buf.buf;
+      if ((ctl->pg_siz = sysconf(_SC_PAGESIZE)) == -1)
+         ctl->pg_siz = 0;
+      ctl->pg_blk_siz = ctl->pg_siz * MMAP_PAGES;
       return ctl;
 #else
+      errno = EINVAL;
       free(ctl);
       return NULL;
 #endif
@@ -469,34 +483,56 @@ void hpx_free(hpx_ctrl_t *ctl)
  *  a valid bstring to the element. -1 is returned in case of error. On eof, 0
  *  is returned.
  */
-int hpx_get_elem(hpx_ctrl_t *ctl, bstring_t *b, int *in_tag, long *lno)
+long hpx_get_eleml(hpx_ctrl_t *ctl, bstringl_t *b, int *in_tag, long *lno)
 {
    long s;
 
    for (;;)
    {
+#ifdef WITH_MMAP
+      if (ctl->mmap)
+      {
+         if ((ctl->buf.buf + ctl->pos) >= ctl->madv_ptr)
+         {
+            s = ctl->madv_ptr + ctl->pg_blk_siz <= ctl->buf.buf + ctl->len ? ctl->pg_blk_siz : ctl->buf.buf + ctl->len - ctl->madv_ptr;
+            // FIXME: return code of madvise() should be honored
+            (void) madvise(ctl->madv_ptr, s, MADV_WILLNEED);
+            if ((ctl->madv_ptr - ctl->pg_blk_siz) >= ctl->buf.buf)
+               (void) madvise(ctl->madv_ptr - ctl->pg_blk_siz, ctl->pg_blk_siz, MADV_DONTNEED);
+            ctl->madv_ptr += ctl->pg_blk_siz;
+         }
+      }
+#endif
+
       if (ctl->empty)
       {
-         // move remaining data to the beginning of the buffer
-         ctl->buf.len -= ctl->pos;
-         memmove(ctl->buf.buf, ctl->buf.buf + ctl->pos, ctl->buf.len);
-         ctl->pos = 0;
-
-         // read new data from file
-         for (;;)
+         if (ctl->mmap)
          {
-            if ((s = read(ctl->fd, ctl->buf.buf + ctl->buf.len, ctl->len - ctl->buf.len)) != -1)
-               break;
-
-            if (errno != EINTR)
-               return -1;
-         }
-
-         if (!s)
             ctl->eof = 1;
+         }
+         else
+         {
+            // move remaining data to the beginning of the buffer
+            ctl->buf.len -= ctl->pos;
+            memmove(ctl->buf.buf, ctl->buf.buf + ctl->pos, ctl->buf.len);
+            ctl->pos = 0;
 
-         // adjust position pointers
-         ctl->buf.len += s;
+            // read new data from file
+            for (;;)
+            {
+               if ((s = read(ctl->fd, ctl->buf.buf + ctl->buf.len, ctl->len - ctl->buf.len)) != -1)
+                  break;
+
+               if (errno != EINTR)
+                  return -1;
+            }
+
+            if (!s)
+               ctl->eof = 1;
+
+            // adjust position pointers
+            ctl->buf.len += s;
+         }
          ctl->empty = 0;
       }
 
@@ -528,6 +564,26 @@ int hpx_get_elem(hpx_ctrl_t *ctl, bstring_t *b, int *in_tag, long *lno)
 
       ctl->empty = 1;
    }
+}
+
+
+int hpx_get_elem(hpx_ctrl_t *ctl, bstring_t *b, int *in_tag, long *lno)
+{
+   long e;
+   bstringl_t bl;
+
+   if ((e = hpx_get_eleml(ctl, &bl, in_tag, lno)) == -1)
+      return -1;
+
+   if (bl.len > INT_MAX)
+   {
+      errno = ERANGE;
+      return -1;
+   }
+
+   b->len = bl.len;
+   b->buf = bl.buf;
+   return e;
 }
 
 
