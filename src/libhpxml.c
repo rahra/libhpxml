@@ -449,6 +449,10 @@ hpx_ctrl_t *hpx_init(int fd, long len)
       if ((ctl->pg_siz = sysconf(_SC_PAGESIZE)) == -1)
          ctl->pg_siz = 0;
       ctl->pg_blk_siz = ctl->pg_siz * MMAP_PAGES;
+
+      // advise 1st block
+      madvise(ctl->madv_ptr, ctl->pg_blk_siz <= ctl->len ? ctl->pg_blk_siz : ctl->len, MADV_WILLNEED);
+ 
       return ctl;
 #else
       errno = EINVAL;
@@ -499,14 +503,20 @@ long hpx_get_eleml(hpx_ctrl_t *ctl, bstringl_t *b, int *in_tag, long *lno)
       {
          if ((ctl->buf.buf + ctl->pos) >= ctl->madv_ptr)
          {
-            s = ctl->madv_ptr + ctl->pg_blk_siz <= ctl->buf.buf + ctl->len ? ctl->pg_blk_siz : ctl->buf.buf + ctl->len - ctl->madv_ptr;
-            // FIXME: return code of madvise() should be honored
-            (void) madvise(ctl->madv_ptr, s, MADV_WILLNEED);
-            if ((ctl->madv_ptr - ctl->pg_blk_siz) >= ctl->buf.buf)
-               (void) madvise(ctl->madv_ptr - ctl->pg_blk_siz, ctl->pg_blk_siz, MADV_DONTNEED);
+            // pull in next block if it is available
+            if (ctl->buf.buf + ctl->len > ctl->madv_ptr + ctl->pg_blk_siz)
+            {
+               madvise(ctl->madv_ptr + ctl->pg_blk_siz,
+                     ctl->len - ctl->pos - ctl->pg_blk_siz >= ctl->pg_blk_siz ?
+                     ctl->pg_blk_siz : ctl->len - ctl->pos - ctl->pg_blk_siz,
+                     MADV_WILLNEED);
+            }
+            // mark previous block as unneeded
+            if (ctl->madv_ptr - ctl->pg_blk_siz >= ctl->buf.buf)
+               madvise(ctl->madv_ptr - ctl->pg_blk_siz, ctl->pg_blk_siz, MADV_DONTNEED);
             ctl->madv_ptr += ctl->pg_blk_siz;
          }
-      }
+     }
 #endif
 
       if (ctl->empty)
