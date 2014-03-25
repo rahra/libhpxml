@@ -1,14 +1,11 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
-"http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html>
    <head>
       <meta name="author" content="Bernhard R. Fischer">
       <meta name="date" content="2012-01-09T12:06:00+0200">
       <meta http-equiv="content-type" content="text/html; charset=UTF-8">
       <title>libhpxml &ndash; A High Performance XML Stream Parser</title>
-      <style type="text/css">
-         p { text-align:justify; }
-      </style>
+      <style type="text/css"> p { text-align:justify; } </style>
    </head>
    <body>
       <h1>libhpxml &ndash; A High Performance XML Stream Parser</h1>
