@@ -15,6 +15,10 @@
  * along with libhpxml. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -44,7 +48,7 @@ long hpx_lineno(void)
  */
 int skip_bblank(bstring_t *b)
 {
-   for (; isspace(*b->buf) && b->len; bs_advance(b));
+   for (; isspace((unsigned) *b->buf) && b->len; bs_advance(b));
    return b->len;
 }
 
@@ -52,6 +56,28 @@ int skip_bblank(bstring_t *b)
 void hpx_tm_free(hpx_tag_t *t)
 {
    free(t);
+}
+
+
+/*! This function recursively frees a tree with all its subtrees and tags.
+ *  @param tlist Pointer to tree which should be freed.
+ */
+void hpx_tm_free_tree(hpx_tree_t *tlist)
+{
+   int i;
+
+   // break recursion
+   if (tlist == NULL)
+      return;
+
+   // recursively free all subtrees
+   for (i = 0; i < tlist->msub; i++)
+      hpx_tm_free_tree(tlist->subtag[i]);
+
+   // free tag element of tree
+   hpx_tm_free(tlist->tag);
+   // free tree itself
+   free(tlist);
 }
 
 
@@ -72,12 +98,12 @@ hpx_tag_t *hpx_tm_create(int n)
  */
 int hpx_parse_name(bstring_t *b, bstring_t *n)
 {
-   if (!IS_XML1CHAR(*b->buf))
+   if (!IS_XML1CHAR((unsigned) *b->buf))
       return 0;
 
    n->buf = b->buf;
    bs_advance(b);
-   for (n->len = 1; IS_XMLCHAR(*b->buf) && b->len; bs_advance(b), n->len++);
+   for (n->len = 1; IS_XMLCHAR((unsigned) *b->buf) && b->len; bs_advance(b), n->len++);
    return n->len;
 }
 
@@ -157,7 +183,7 @@ int hpx_process_elem(bstring_t b, hpx_tag_t *p)
       return -1;
 
    //if (isalpha(*b.buf) || (*b.buf == '_') || (*b.buf == ':'))
-   if (IS_XML1CHAR(*b.buf))
+   if (IS_XML1CHAR((unsigned) *b.buf))
    {
       hpx_parse_name(&b, &p->tag);
       hpx_parse_attr_list(&b, p);
@@ -398,7 +424,7 @@ int hpx_proc_buf(hpx_ctrl_t *ctl, bstringl_t *b, long *lno)
 
       // cut trailing white spaces
       //for (b->len = s; b->len && (b->buf[b->len - 1] == ' '); b->len--);
-      for (b->len = s; b->len && isspace(b->buf[b->len - 1]); b->len--);
+      for (b->len = s; b->len && isspace((unsigned) b->buf[b->len - 1]); b->len--);
 
       s += i;
    }
@@ -469,6 +495,23 @@ hpx_ctrl_t *hpx_init(int fd, long len)
 }
 
 
+/*! This function initializes a hpx_ctrl_t structure to be used for input from
+ * a memory buffer (instead of a file).
+ * @param ctl Pointer to hpx_ctrl_t structure which will be initialized
+ *    properly.
+ * @param buf Pointer to memory buffer.
+ * @param len Number of bytes within memory buffer.
+ */
+void hpx_init_membuf(hpx_ctrl_t *ctl, void *buf, int len)
+{
+   memset(ctl, 0, sizeof(*ctl));
+   ctl->buf.len = len;
+   ctl->buf.buf = buf;
+   ctl->fd = -1;
+   ctl->len = len;
+}
+
+
 void hpx_free(hpx_ctrl_t *ctl)
 {
 #ifdef WITH_MMAP
@@ -532,8 +575,8 @@ long hpx_get_eleml(hpx_ctrl_t *ctl, bstringl_t *b, int *in_tag, long *lno)
             memmove(ctl->buf.buf, ctl->buf.buf + ctl->pos, ctl->buf.len);
             ctl->pos = 0;
 
-            // read new data from file
-            for (;;)
+            // read new data from file (but not the mem buffer, i.e. fd == -1)
+            for (s = 0; ctl->fd != -1;)
             {
                if ((s = read(ctl->fd, ctl->buf.buf + ctl->buf.len, ctl->len - ctl->buf.len)) != -1)
                   break;
@@ -553,8 +596,7 @@ long hpx_get_eleml(hpx_ctrl_t *ctl, bstringl_t *b, int *in_tag, long *lno)
 
       // no more data available
       if (!ctl->buf.len)
-         // FIXME: return value questionable (-1 eq error)
-         return -1;
+         return 0;
 
       b->buf = ctl->buf.buf + ctl->pos;
       b->len = ctl->buf.len - ctl->pos;
