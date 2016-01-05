@@ -1,11 +1,15 @@
-# bhpxml – A High Performance XML Stream Parser
+# Libhpxml – A High Performance XML Stream Parser
 
 Libhpxml is a high performance XML stream parser library written in C with a simple API. 
 
 ## Description
 
-libhpxml is a high performance XML stream parser library written in C with a simple API. It is intended to parse XML files very speed efficient. This may be required when processing huge XML files like the OSM planet file which currently has 260GB+.
-The development goals are *speed efficiency* and *simple memory handling* to reduce the risk of memory leaks. These objectives are achieved through
+Libhpxml is a high performance XML stream parser library written in C with a
+simple API. It is intended to parse XML files very speed efficient. This may be
+required when processing huge XML files like the OSM planet file which
+currently has 260GB+.
+The development goals are **speed efficiency** and **simple memory handling** to
+reduce the risk of memory leaks. These objectives are achieved through
 
 * avoidance of system calls (such as `malloc(3)`) as much as possible,
 * usage of (nearly) static memory buffers, and
@@ -229,7 +233,7 @@ does not exhaust it).
 ## Author
 
 libhpxml is developed and maintained by Bernhard R. Fischer, 2048R/5C5FFD47 <bf@abenteuerland.at>.
-Latest update 2012/01/09.
+Latest update 2016/01/05, imported into Github, was originally at http://www.abenteuerland.at/libhpxml/ .
 
 ## License
 
