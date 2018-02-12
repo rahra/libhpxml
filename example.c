@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
    hpx_ctrl_t *ctl;
    hpx_tag_t *tag;
    bstring_t b;
-   size_t lno;
+   long lno;
 
    // initialize control structure, stdin, 100MB buffer
    if ((ctl = hpx_init(0, 100*1024*1024)) == NULL)
