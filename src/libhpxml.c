@@ -1,4 +1,4 @@
-/* Copyright 2011 Bernhard R. Fischer, 2048R/5C5FFD47 <bf@abenteuerland.at>
+/* Copyright 2011-2018 Bernhard R. Fischer, 4096R/8E24F29D <bf@abenteuerland.at>
  *
  * This file is part of libhpxml.
  *
@@ -217,20 +217,19 @@ int hpx_process_elem(bstring_t b, hpx_tag_t *p)
 
    if (*b.buf == '/')
    {
+      if (!bs_advance(&b))
+         return -1;
 
-   if (!bs_advance(&b))
-      return -1;
+      if (!skip_bblank(&b))
+         return -1;
 
-   if (!skip_bblank(&b))
-      return -1;
+      hpx_parse_name(&b, &p->tag);
 
-   hpx_parse_name(&b, &p->tag);
+      if (!skip_bblank(&b))
+         return -1;
 
-   if (!skip_bblank(&b))
-      return -1;
-
-   if (*b.buf != '>')
-      return -1;
+      if (*b.buf != '>')
+         return -1;
 
       p->type = HPX_CLOSE;
       //call tag processor
@@ -629,8 +628,8 @@ int hpx_get_elem(hpx_ctrl_t *ctl, bstring_t *b, int *in_tag, long *lno)
    long e;
    bstringl_t bl;
 
-   if ((e = hpx_get_eleml(ctl, &bl, in_tag, lno)) == -1)
-      return -1;
+   if ((e = hpx_get_eleml(ctl, &bl, in_tag, lno)) <= 0)
+      return e;
 
    if (bl.len > INT_MAX)
    {
