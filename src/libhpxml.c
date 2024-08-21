@@ -158,8 +158,23 @@ int hpx_parse_attr_list(bstring_t *b, hpx_tag_t *t)
    return t->nattr;
 }
 
- 
-/*! Parses bstring into hpx_tag_t structure. The bstring buffer must contain a
+int is_preserve_space(const hpx_tag_t *tag)
+{
+   for (int k = 0; k < tag->nattr; ++k)
+   {
+      if (!bs_cmp(tag->attr[k].name, "xml:space"))
+      {
+         if (!bs_cmp(tag->attr[k].value, "preserve"))
+            return 1;
+         else
+            return 0;	  
+      }
+   }
+
+   return 0;
+}
+
+    /*! Parses bstring into hpx_tag_t structure. The bstring buffer must contain a
  * single XML element with correct boundaries. This is either a tag (<....>) or
  * just text.
  * @param b Bstring containing pointer to an element.
@@ -169,7 +184,7 @@ int hpx_parse_attr_list(bstring_t *b, hpx_tag_t *t)
  * out.
  * @return Returns 0 if the bstring could be successfully parsed, otherwise -1.
  */
-int hpx_process_elem(bstring_t b, hpx_tag_t *p)
+int hpx_process_elem(hpx_ctrl_t *ctl, bstring_t b, hpx_tag_t *p)
 {
    if (b.len && (*b.buf != '<'))
    {
@@ -197,6 +212,13 @@ int hpx_process_elem(bstring_t b, hpx_tag_t *p)
 
       if (*b.buf == '>')
       {
+         if (!ctl->preserve_space)
+         {
+            ctl->preserve_space = is_preserve_space(p);
+            if (ctl->preserve_space)
+               ctl->preserve_space_tag = p->tag;
+         }
+
          p->type = HPX_OPEN;
          // call tag processor
          return 0;
@@ -234,6 +256,14 @@ int hpx_process_elem(bstring_t b, hpx_tag_t *p)
 
       if (*b.buf != '>')
          return -1;
+
+      if (ctl->preserve_space)
+      {
+         if (!bs_ncmp(ctl->preserve_space_tag, p->tag.buf, p->tag.len))
+         {
+            ctl->preserve_space = false;
+         }
+      }
 
       p->type = HPX_CLOSE;
       //call tag processor
@@ -412,9 +442,17 @@ int hpx_proc_buf(hpx_ctrl_t *ctl, bstringl_t *b, long *lno)
    }
    else
    {
-      // skip leading white spaces
-      for (i = 0; i < b->len && !cblank(b->buf); i++)
-         bs_advancel(b);
+      if (ctl->preserve_space)
+      {
+         i = 0;
+      }
+      else
+      {
+         // skip leading white spaces
+         for (i = 0; i < b->len && !cblank(b->buf); i++)
+            bs_advancel(b);
+      }
+
       if (i == b->len)
          return -1;
 
@@ -425,9 +463,17 @@ int hpx_proc_buf(hpx_ctrl_t *ctl, bstringl_t *b, long *lno)
       if (s == b->len)
          return -1;
 
-      // cut trailing white spaces
-      //for (b->len = s; b->len && (b->buf[b->len - 1] == ' '); b->len--);
-      for (b->len = s; b->len && isspace((unsigned) b->buf[b->len - 1]); b->len--);
+      if (ctl->preserve_space)
+      {
+         b->len = s;
+      }
+      else
+      {
+         // cut trailing white spaces
+         // for (b->len = s; b->len && (b->buf[b->len - 1] == ' '); b->len--);
+         for (b->len = s; b->len && isspace((unsigned)b->buf[b->len - 1]); b->len--)
+            ;
+      }
 
       s += i;
    }

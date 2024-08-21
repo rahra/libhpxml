@@ -58,6 +58,9 @@ typedef struct hpx_ctrl
    long pg_siz;
    //! length of advised region (multiple of sysconf(_SC_PAGESIZE))
    long pg_blk_siz;
+
+   int preserve_space;
+   bstring_t preserve_space_tag;
 } hpx_ctrl_t;
 
 typedef struct hpx_attr
@@ -95,7 +98,7 @@ long hpx_lineno(void);
 void hpx_tm_free(hpx_tag_t *t);
 void hpx_tm_free_tree(hpx_tree_t *);
 hpx_tag_t *hpx_tm_create(int n);
-int hpx_process_elem(bstring_t b, hpx_tag_t *p);
+int hpx_process_elem(hpx_ctrl_t *ctl, bstring_t b, hpx_tag_t *p);
 hpx_ctrl_t *hpx_init(int fd, long len);
 void hpx_init_membuf(hpx_ctrl_t *ctl, void *buf, int len);
 void hpx_free(hpx_ctrl_t *ctl);
