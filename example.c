@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
    while (hpx_get_elem(ctl, &b, NULL, &lno) > 0)
    {
       // parse XML element
-      if (!hpx_process_elem(b, tag))
+      if (!hpx_process_elem(ctl, b, tag))
       {
          // element successfully parsed, do something with it
          // ...
