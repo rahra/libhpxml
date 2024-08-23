@@ -259,7 +259,8 @@ int hpx_process_elem(hpx_ctrl_t *ctl, bstring_t b, hpx_tag_t *p)
 
       if (ctl->preserve_space)
       {
-         if (!bs_ncmp(ctl->preserve_space_tag, p->tag.buf, p->tag.len))
+         if (ctl->preserve_space_tag.len == p->tag.len &&
+            !memcmp(ctl->preserve_space_tag.buf, p->tag.buf, p->tag.len))
          {
             ctl->preserve_space = 0;
          }
