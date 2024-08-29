@@ -440,26 +440,48 @@ int hpx_proc_buf(hpx_ctrl_t *ctl, bstringl_t *b, long *lno)
       if (s > b->len)
          return -1;
       b->len = s;
+
+      // check if it is a regular opening tag and preserve its name
+      if (IS_XML1CHAR(b->buf[1]))
+      {
+         ctl->last_open.buf = b->buf + 1;
+         for (ctl->last_open.len = 1; IS_XMLCHAR((unsigned) ctl->last_open.buf[ctl->last_open.len]) && (ctl->last_open.len < b->len - 2); ctl->last_open.len++);
+      }
+      else
+         ctl->last_open.len = 0;
    }
    else
    {
-      // skip leading white spaces if ctl->mode == 0
-      for (i = 0; !ctl->mode && i < b->len && !cblank(b->buf); i++)
-         bs_advancel(b);
-      if (i == b->len)
-         return -1;
-
       if (lno != NULL)
          *lno = hpx_lineno_;
+
       s = count_literal(*b, &n);
       // check if literal had no end tag (i.e. '<')
       if (s == b->len)
          return -1;
 
-      // cut trailing white spaces
-      for (b->len = s; !ctl->mode && b->len && isspace((unsigned) b->buf[b->len - 1]); b->len--);
+      // !(check if we are within an opening tag and there's the corresponding closing tag)
+      if (!ctl->last_open.len || (b->len - s <= ctl->last_open.len + 2) || (b->buf[s + 1] != '/') || strncmp(&b->buf[s + 2], ctl->last_open.buf, ctl->last_open.len))
+      {
+         // reset line number
+         if (lno != NULL)
+            hpx_lineno_ = *lno;
+         // skip leading white spaces
+         for (i = 0; i < b->len && !cblank(b->buf); i++)
+            bs_advancel(b);
+         if (i == b->len)
+            return -1;
 
-      s += i;
+         if (lno != NULL)
+            *lno = hpx_lineno_;
+
+         // cut trailing white spaces
+         for (b->len = s - i; b->len && isspace((unsigned) b->buf[b->len - 1]); b->len--);
+      }
+      else
+         b->len = s;
+
+      ctl->last_open.len = 0;
    }
 
    return s;

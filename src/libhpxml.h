@@ -42,7 +42,6 @@
 typedef struct hpx_ctrl
 {
    //! data buffer containing pointer and number of bytes in buffer
-   //bstring_t buf;
    struct bstringl buf;
    //! file descriptor of input file
    int fd;
@@ -64,8 +63,8 @@ typedef struct hpx_ctrl
    long pg_siz;
    //! length of advised region (multiple of sysconf(_SC_PAGESIZE))
    long pg_blk_siz;
-   //! compatibility mode = 0 (original version), 1 = new mode since 2024/08/28
-   int mode;
+   //! structure contains a pointer to the latest tag name if it was an open tag
+   bstringl_t last_open;
 } hpx_ctrl_t;
 
 typedef struct hpx_attr
