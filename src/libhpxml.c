@@ -325,6 +325,7 @@ int cblank(char *c)
    {
       case '\n':
          hpx_lineno_++;
+         /* fall through */
       case '\t':
       case '\r':
 #ifdef MODMEM
@@ -348,6 +349,7 @@ int cblank1(const char *c)
    {
       case '\n':
          hpx_lineno_++;
+         /* fall through */
       case '\t':
       case '\r':
       case ' ':
@@ -713,6 +715,7 @@ int hpx_fprintf_tag(FILE *f, const hpx_tag_t *p)
 
       case HPX_SINGLE:
          s = "/";
+         /* fall through */
       case HPX_OPEN:
          n = fprintf(f, "<%.*s", p->tag.len, p->tag.buf);
          for (i = 0; i < p->nattr; i++)
