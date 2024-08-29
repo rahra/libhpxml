@@ -1,4 +1,4 @@
-/* Copyright 2011 Bernhard R. Fischer, 2048R/5C5FFD47 <bf@abenteuerland.at>
+/* Copyright 2011-2024 Bernhard R. Fischer, 4096R/8E24F29D <bf@abenteuerland.at>
  *
  * This file is part of libhpxml.
  *
@@ -13,6 +13,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with libhpxml. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/*! \file libhpxml.h
+ * This file contains all declarations and prototypes for libhpxml.
+ * \author Bernhard R. Fischer, <bf@abenteuerland.at>
+ * \version 2024/08/29
  */
 
 #ifndef HPXML_H
@@ -88,7 +94,7 @@ typedef struct hpx_tree
 
 enum
 {
-   HPX_ILL, HPX_OPEN, HPX_SINGLE, HPX_CLOSE, HPX_LITERAL, HPX_ATT, HPX_INSTR, HPX_COMMENT
+   HPX_ILL, HPX_OPEN, HPX_SINGLE, HPX_CLOSE, HPX_LITERAL, HPX_ATT, HPX_INSTR, HPX_COMMENT, HPX_CDATA
 };
 
 

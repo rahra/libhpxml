@@ -18,7 +18,7 @@
 /*! \file libhpxml.c
  * This file contains the complete source for the parser.
  * \author Bernhard R. Fischer, <bf@abenteuerland.at>
- * \date 2024/08/24
+ * \date 2024/08/29
  */
 
 #ifdef HAVE_CONFIG_H
@@ -247,18 +247,39 @@ int hpx_process_elem(bstring_t b, hpx_tag_t *p)
    if (*b.buf == '!')
    {
       bs_advance(&b);
+
+      // check for comment
       if ((b.len >= 2) && !strncmp(b.buf, "--", 2))
       {
          b.buf += 2;
          b.len -= 2;
          p->tag.buf = b.buf;
 
+         // find end marker
          for (p->tag.len = 0; (b.len >= 3) && strncmp(b.buf, "-->", 3); bs_advance(&b), p->tag.len++);
 
          if (b.len < 3)
             return -1;
 
          p->type = HPX_COMMENT;
+         //call tag processor
+         return 0;
+      }
+
+      // check for CDATA
+      if ((b.len >= 7) && !strncmp(b.buf, "[CDATA[", 7))
+      {
+         b.buf += 7;
+         b.len -= 7;
+         p->tag.buf = b.buf;
+
+         // find end marker
+         for (p->tag.len = 0; (b.len >= 3) && strncmp(b.buf, "]]>", 3); bs_advance(&b), p->tag.len++);
+
+         if (b.len < 3)
+            return -1;
+
+         p->type = HPX_CDATA;
          //call tag processor
          return 0;
       }
@@ -345,18 +366,24 @@ int cblank1(const char *c)
  */
 int count_tag(bstringl_t b)
 {
-   int i, c = 0;
+   int i, c = HPX_ILL;
 
+   // manage comments
    if ((b.len >= 7) && !strncmp(b.buf + 1, "!--", 3))
-      c = 1;
+      c = HPX_COMMENT;
+   // manage CDATA
+   if ((b.len >= 12) && !strncmp(b.buf + 1, "![CDATA[", 8))
+      c = HPX_CDATA;
 
    for (i = 0; i < b.len; i++, b.buf++)
    {
       if (*b.buf == '>')
       {
-         if (!c)
+         if (c == HPX_ILL)
             break;
-         if ((i >= 7) && !strncmp(b.buf - 2, "--", 2))
+         if ((c == HPX_COMMENT) && (i >= 7) && !strncmp(b.buf - 2, "--", 2))
+            break;
+         if ((c == HPX_CDATA) && (i >= 12) && !strncmp(b.buf - 2, "]]", 2))
             break;
          else
             continue;
