@@ -16,8 +16,10 @@ int main(int argc, char *argv[])
    if ((ctl = hpx_init(0, 100*1024*1024)) == NULL)
       perror("hpx_init"), exit(EXIT_FAILURE);
    // initialize tag structure with maximum 16 attributes
-   if ((tag = hpx_tm_create(16)) == NULL)
+   if ((tag = hpx_tm_create(64)) == NULL)
       perror("hpx_tm_create"), exit(EXIT_FAILURE);
+
+   ctl->mode = 1;
 
    // loop as long as XML elements are available
    while (hpx_get_elem(ctl, &b, NULL, &lno) > 0)

@@ -46,7 +46,7 @@ typedef struct hpx_ctrl
    long len;
    //! current working position
    long pos;
-   //! flag to deter if next element is in or out of tag
+   //! flag to determine if next element is in or out of tag
    int in_tag;
    //! flag set if data should be read from file
    short empty;
@@ -58,6 +58,8 @@ typedef struct hpx_ctrl
    long pg_siz;
    //! length of advised region (multiple of sysconf(_SC_PAGESIZE))
    long pg_blk_siz;
+   //! compatibility mode = 0 (original version), 1 = new mode since 2024/08/28
+   int mode;
 } hpx_ctrl_t;
 
 typedef struct hpx_attr
@@ -71,7 +73,6 @@ typedef struct hpx_tag
 {
    bstring_t tag;
    int type;
-   long line;
    int nattr;
    int mattr;
    hpx_attr_t attr[];

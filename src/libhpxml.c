@@ -1,4 +1,4 @@
-/* Copyright 2011-2018 Bernhard R. Fischer, 4096R/8E24F29D <bf@abenteuerland.at>
+/* Copyright 2011-2024 Bernhard R. Fischer, 4096R/8E24F29D <bf@abenteuerland.at>
  *
  * This file is part of libhpxml.
  *
@@ -13,6 +13,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with libhpxml. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/*! \file libhpxml.c
+ * This file contains the complete source for the parser.
+ * \author Bernhard R. Fischer, <bf@abenteuerland.at>
+ * \date 2024/08/24
  */
 
 #ifdef HAVE_CONFIG_H
@@ -163,8 +169,6 @@ int hpx_parse_attr_list(bstring_t *b, hpx_tag_t *t)
  * single XML element with correct boundaries. This is either a tag (<....>) or
  * just text.
  * @param b Bstring containing pointer to an element.
- * @param in Must be set to 0 if element is literal text, otherwise 1 if it is
- * a tag.
  * @param p Pointer to valid hpx_tag_t structure. The structure will we filled
  * out.
  * @return Returns 0 if the bstring could be successfully parsed, otherwise -1.
@@ -333,7 +337,7 @@ int cblank1(const char *c)
 }
 
 
-/*! Returns length if tag.
+/*! Returns length of tag.
  *  @param buf Pointer to buffer.
  *  @param len Length of buffer.
  *  @return Lendth of tag content including '<' and '>'. If return value > len,
@@ -412,8 +416,8 @@ int hpx_proc_buf(hpx_ctrl_t *ctl, bstringl_t *b, long *lno)
    }
    else
    {
-      // skip leading white spaces
-      for (i = 0; i < b->len && !cblank(b->buf); i++)
+      // skip leading white spaces if ctl->mode == 0
+      for (i = 0; !ctl->mode && i < b->len && !cblank(b->buf); i++)
          bs_advancel(b);
       if (i == b->len)
          return -1;
@@ -426,8 +430,7 @@ int hpx_proc_buf(hpx_ctrl_t *ctl, bstringl_t *b, long *lno)
          return -1;
 
       // cut trailing white spaces
-      //for (b->len = s; b->len && (b->buf[b->len - 1] == ' '); b->len--);
-      for (b->len = s; b->len && isspace((unsigned) b->buf[b->len - 1]); b->len--);
+      for (b->len = s; !ctl->mode && b->len && isspace((unsigned) b->buf[b->len - 1]); b->len--);
 
       s += i;
    }
@@ -435,18 +438,13 @@ int hpx_proc_buf(hpx_ctrl_t *ctl, bstringl_t *b, long *lno)
    return s;
 }
 
-/*
-int hpx_buf_reader(int fd, char *buf, int buflen)
-{
-   return -1;
-}
-*/
 
-/*!
+/*! This function initializes the control structure which is the foundation for
+ * all other functions. Please note that memory mapping is the recommended
+ * method (see parameter len).
  *  @param fd Input file descriptor.
  *  @param len Read buffer length. If len is negative, the file is memory
  *  mapped with mmap(). This works only if it was compiled with WITH_MMAP.
- *  @param mattr Maximum number of attributes per tag.
  *  @return Pointer to allocated hpx_ctrl_t structure. On error NULL is
  *  returned and errno is set. If compiled without WITH_MMAP and hpx_init() is
  *  called with negative len parameter, NULL is returned and errno is set to
