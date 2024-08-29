@@ -368,7 +368,8 @@ int cblank1(const char *c)
  */
 int count_tag(bstringl_t b)
 {
-   int i, c = HPX_ILL;
+#define HPX_DOCTYPE 0x100
+   int i, c = HPX_ILL, sqcnt = 0;
 
    // manage comments
    if ((b.len >= 7) && !strncmp(b.buf + 1, "!--", 3))
@@ -376,6 +377,9 @@ int count_tag(bstringl_t b)
    // manage CDATA
    if ((b.len >= 12) && !strncmp(b.buf + 1, "![CDATA[", 8))
       c = HPX_CDATA;
+   // manage DOCTYPE sub entities
+   if ((b.len >= 10) && !strncasecmp(b.buf + 1 , "!DOCTYPE", 8) && (isspace(b.buf[9]) || (b.buf[9] == '>')))
+      c = HPX_DOCTYPE;
 
    for (i = 0; i < b.len; i++, b.buf++)
    {
@@ -387,9 +391,24 @@ int count_tag(bstringl_t b)
             break;
          if ((c == HPX_CDATA) && (i >= 12) && !strncmp(b.buf - 2, "]]", 2))
             break;
+         if ((c == HPX_DOCTYPE) && !sqcnt)
+            break;
          else
             continue;
       }
+      // count square brackets in DOCTYPE
+      else if (c == HPX_DOCTYPE)
+         switch (*b.buf)
+         {
+            case '[':
+               sqcnt++;
+               break;
+
+            case ']':
+               sqcnt--;
+               break;
+         }
+
       (void) cblank(b.buf);
    }
 
