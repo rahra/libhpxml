@@ -1,4 +1,4 @@
-#/* Copyright 2011 Bernhard R. Fischer, 2048R/5C5FFD47 <bf@abenteuerland.at>
+#/* Copyright 2011-2024 Bernhard R. Fischer, 4096R/8E24F29D <bf@abenteuerland.at>
 # *
 # * This file is part of libhpxml.
 # *
@@ -20,18 +20,22 @@ CFLAGS	= -Wall -Isrc
 SVNVER	= $(shell svnversion | tr -d -c '[:digit:]')
 DISTDST	= libhpxml-r$(SVNVER)
 
-all: example
+all: example example2
 
 example: example.o libhpxml.a
 
 example.o: example.c
+
+example2: example2.o libhpxml.a
+
+example2.o: example.c
 
 libhpxml.a:
 	make -C src
 	cp src/libhpxml.a .
 
 clean:
-	rm -f libhpxml.a
+	rm -f libhpxml.a *.o
 	make -C src clean
 
 dist:

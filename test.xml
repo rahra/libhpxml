@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<!DOCTYPE items [
+<!ELEMENT items (item*)>
+<!ATTLIST items exportTime CDATA "">
+<!ELEMENT item (time, url, host, port, protocol, method, path, extension, request, status, responselength, mimetype, response, comment)>
+]>
+<items burpVersion="2024.7.4" exportTime="Wed Aug 28 12:08:22 CEST 2000">
+  <item>
+    <time>Wed Aug 28 11:37:47 CEST 2000</time>
+    <url><![CDATA[https://xyz.ex4mple.vom/v4/api]]></url>
+    <host ip="30.500.818.22">xyz.ex4mple.vom</host>
+    <port>443</port>
+    <path><![CDATA[/v4/api]]></path>
+    <extension>null</extension>
+    <status>206</status>
+    <empty>   </empty>
+    <responselength>3525</responselength>
+    <mimetype>JSON</mimetype>
+    <comment><![CDATA[192.168.0.146]]></comment>
+  </item>
+</items>
