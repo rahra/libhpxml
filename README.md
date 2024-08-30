@@ -150,6 +150,7 @@ enum | Description | Example
 `HPX_ATT` | Declarations.  `<! ..... >`
 `HPX_INSTR` | Instructions.  `<? .... ?>`
 `HPX_COMMENT` | Comments.   `<!-- .... -->`
+`HPX_CDATA` | CDATA.  `<[CDATA[ .... ]]>`
 
 ```C
    hpx_tag_t *hpx_tm_create(int n);
@@ -232,8 +233,7 @@ does not exhaust it).
 
 ## Author
 
-libhpxml is developed and maintained by Bernhard R. Fischer, 2048R/5C5FFD47 <bf@abenteuerland.at>.
-Latest update 2016/01/05, imported into Github, was originally at http://www.abenteuerland.at/libhpxml/ .
+libhpxml is developed and maintained by Bernhard R. Fischer, 4096R/8E24F29D <bf@abenteuerland.at>.
 
 ## License
 
