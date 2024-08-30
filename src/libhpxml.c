@@ -18,7 +18,7 @@
 /*! \file libhpxml.c
  * This file contains the complete source for the parser.
  * \author Bernhard R. Fischer, <bf@abenteuerland.at>
- * \date 2024/08/29
+ * \date 2024/08/30
  */
 
 #ifdef HAVE_CONFIG_H
@@ -41,15 +41,6 @@
 
 #include "bstring.h"
 #include "libhpxml.h"
-
-
-static long hpx_lineno_;
-
-
-long hpx_lineno(void)
-{
-   return hpx_lineno_;
-}
 
 
 /*! 
@@ -315,40 +306,17 @@ int hpx_process_elem(bstring_t b, hpx_tag_t *p)
 }
 
 
-/*! Changes white spaces ([\t\n\r]) to space ([ ]).
+/*! Checks for XML white spaces ([\t\n\r]) and increases the line number counter.
  * @param c Pointer to character.
  * @return Returns 0 if character contains any of [ \t\r\n], otherwise 1.
  */
-int cblank(char *c)
+int cblank(const char *c, long *lno)
 {
    switch (*c)
    {
       case '\n':
-         hpx_lineno_++;
-         /* fall through */
-      case '\t':
-      case '\r':
-#ifdef MODMEM
-         *c = ' ';
-#endif
-      case ' ':
-         return 0;
-   }
-
-   return 1;
-}
-
-
-/*! Works like cblank() but does not change any character.
- * @param c Pointer to character.
- * @return Returns 0 if character contains any of [ \t\r\n], otherwise 1.
- */
-int cblank1(const char *c)
-{
-   switch (*c)
-   {
-      case '\n':
-         hpx_lineno_++;
+         if (lno != NULL)
+            (*lno)++;
          /* fall through */
       case '\t':
       case '\r':
@@ -363,10 +331,11 @@ int cblank1(const char *c)
 /*! Returns length of tag.
  *  @param buf Pointer to buffer.
  *  @param len Length of buffer.
+ *  @param lno Pointer to line number counter. May be NULL.
  *  @return Lendth of tag content including '<' and '>'. If return value > len,
  *  the tag is unclosed.
  */
-int count_tag(bstringl_t b)
+int count_tag(bstringl_t b, long *lno)
 {
 #define HPX_DOCTYPE 0x100
    int i, c = HPX_ILL, sqcnt = 0;
@@ -409,7 +378,7 @@ int count_tag(bstringl_t b)
                break;
          }
 
-      (void) cblank(b.buf);
+      (void) cblank(b.buf, lno);
    }
 
    return i + 1;
@@ -419,9 +388,10 @@ int count_tag(bstringl_t b)
 /*! Returns length of literal.
  *  @param b Bstring_t of buffer to check.
  *  @param nbc Pointer to integer which counts non-blank characters.
+ *  @param lno Pointer to line number counter. May be NULL.
  *  @return Length of literal. Return value == len if literal is unclosed.
  */
-int count_literal(bstringl_t b, int *nbc)
+int count_literal(bstringl_t b, int *nbc, long *lno)
 {
    int i, t;
 
@@ -435,7 +405,7 @@ int count_literal(bstringl_t b, int *nbc)
       if (*b.buf == '<')
          break;
 
-      *nbc += cblank1(b.buf);
+      *nbc += cblank(b.buf, lno);
    }
 
    return i;
@@ -456,8 +426,8 @@ int hpx_proc_buf(hpx_ctrl_t *ctl, bstringl_t *b, long *lno)
    if (ctl->in_tag)
    {
       if (lno != NULL)
-         *lno = hpx_lineno_;
-      s = count_tag(*b);
+         *lno = ctl->lineno;
+      s = count_tag(*b, &ctl->lineno);
       if (s > b->len)
          return -1;
       b->len = s;
@@ -474,9 +444,9 @@ int hpx_proc_buf(hpx_ctrl_t *ctl, bstringl_t *b, long *lno)
    else
    {
       if (lno != NULL)
-         *lno = hpx_lineno_;
+         *lno = ctl->lineno;
 
-      s = count_literal(*b, &n);
+      s = count_literal(*b, &n, &ctl->lineno);
       // check if literal had no end tag (i.e. '<')
       if (s == b->len)
          return -1;
@@ -486,15 +456,15 @@ int hpx_proc_buf(hpx_ctrl_t *ctl, bstringl_t *b, long *lno)
       {
          // reset line number
          if (lno != NULL)
-            hpx_lineno_ = *lno;
+            ctl->lineno = *lno;
          // skip leading white spaces
-         for (i = 0; i < b->len && !cblank(b->buf); i++)
+         for (i = 0; i < b->len && !cblank(b->buf, &ctl->lineno); i++)
             bs_advancel(b);
          if (i == b->len)
             return -1;
 
          if (lno != NULL)
-            *lno = hpx_lineno_;
+            *lno = ctl->lineno;
 
          // cut trailing white spaces
          for (b->len = s - i; b->len && isspace((unsigned) b->buf[b->len - 1]); b->len--);
@@ -530,7 +500,7 @@ hpx_ctrl_t *hpx_init(int fd, long len)
    memset(ctl, 0, sizeof(*ctl));
    ctl->fd = fd;
    // init line counter
-   hpx_lineno_ = 1;
+   ctl->lineno = 1;
 
    if (len < 0)
    {
@@ -580,6 +550,7 @@ void hpx_init_membuf(hpx_ctrl_t *ctl, void *buf, int len)
    ctl->buf.buf = buf;
    ctl->fd = -1;
    ctl->len = len;
+   ctl->lineno = 1;
 }
 
 

@@ -65,6 +65,8 @@ typedef struct hpx_ctrl
    long pg_blk_siz;
    //! structure contains a pointer to the latest tag name if it was an open tag
    bstringl_t last_open;
+   //! line number counter
+   long lineno;
 } hpx_ctrl_t;
 
 typedef struct hpx_attr
