@@ -18,7 +18,7 @@
 /*! \file libhpxml.c
  * This file contains the complete source for the parser.
  * \author Bernhard R. Fischer, <bf@abenteuerland.at>
- * \date 2024/08/30
+ * \date 2024/09/12
  */
 
 #ifdef HAVE_CONFIG_H
@@ -36,6 +36,25 @@
 #ifndef MAP_NORESERVE
 // MAP_NORESERVE is not defined an all systems is not necessary
 #define MAP_NORESERVE 0
+#endif
+#endif
+
+#ifndef MADV_WILLNEED
+#ifdef POSIX_MADV_WILLNEED
+#define MADV_WILLNEED POSIX_MADV_WILLNEED
+#else
+#warning "cannot define MADV_WILLNEED, will undef madvise()"
+#undef HAVE_MADVISE
+#undef HAVE_POSIX_MADVISE
+#endif
+#endif
+#ifndef MADV_DONTNEED
+#ifdef POSIX_MADV_DONTNEED
+#define MADV_DONTNEED POSIX_MADV_DONTNEED
+#else
+#warning "cannot define MADV_MADV_DONTNEED, will undef madvise()"
+#undef HAVE_MADVISE
+#undef HAVE_POSIX_MADVISE
 #endif
 #endif
 
@@ -479,6 +498,20 @@ int hpx_proc_buf(hpx_ctrl_t *ctl, bstringl_t *b, long *lno)
 }
 
 
+/*! This function is wrapper for either madvise() or posix_madvise().
+ */
+static int hpx_madvise(void *addr, size_t length, int advice)
+{
+#ifdef HAVE_MADVISE
+   return madvise(addr, length, advice);
+#elif HAVE_POSIX_MADVISE
+   return posix_madvise(addr, length, advice);
+#else
+   return 0;
+#endif
+}
+
+
 /*! This function initializes the control structure which is the foundation for
  * all other functions. Please note that memory mapping is the recommended
  * method (see parameter len).
@@ -518,7 +551,7 @@ hpx_ctrl_t *hpx_init(int fd, long len)
       ctl->pg_blk_siz = ctl->pg_siz * MMAP_PAGES;
 
       // advise 1st block
-      madvise(ctl->madv_ptr, ctl->pg_blk_siz <= ctl->len ? ctl->pg_blk_siz : ctl->len, MADV_WILLNEED);
+      hpx_madvise(ctl->madv_ptr, ctl->pg_blk_siz <= ctl->len ? ctl->pg_blk_siz : ctl->len, MADV_WILLNEED);
  
       return ctl;
 #else
@@ -591,14 +624,14 @@ long hpx_get_eleml(hpx_ctrl_t *ctl, bstringl_t *b, int *in_tag, long *lno)
             // pull in next block if it is available
             if (ctl->buf.buf + ctl->len > ctl->madv_ptr + ctl->pg_blk_siz)
             {
-               madvise(ctl->madv_ptr + ctl->pg_blk_siz,
+               hpx_madvise(ctl->madv_ptr + ctl->pg_blk_siz,
                      ctl->len - ctl->pos - ctl->pg_blk_siz >= ctl->pg_blk_siz ?
                      ctl->pg_blk_siz : ctl->len - ctl->pos - ctl->pg_blk_siz,
                      MADV_WILLNEED);
             }
             // mark previous block as unneeded
             if (ctl->madv_ptr - ctl->pg_blk_siz >= ctl->buf.buf)
-               madvise(ctl->madv_ptr - ctl->pg_blk_siz, ctl->pg_blk_siz, MADV_DONTNEED);
+               hpx_madvise(ctl->madv_ptr - ctl->pg_blk_siz, ctl->pg_blk_siz, MADV_DONTNEED);
             ctl->madv_ptr += ctl->pg_blk_siz;
          }
      }
