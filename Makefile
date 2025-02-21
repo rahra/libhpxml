@@ -17,7 +17,7 @@
 
 CC			= gcc
 CFLAGS	= -Wall -Isrc
-SVNVER	= $(shell svnversion | tr -d -c '[:digit:]')
+SVNVER	= 1.1.0
 DISTDST	= libhpxml-r$(SVNVER)
 
 all: example example2
