@@ -1,4 +1,4 @@
-/* Copyright 2011-2024 Bernhard R. Fischer, 4096R/8E24F29D <bf@abenteuerland.at>
+/* Copyright 2011-2025 Bernhard R. Fischer, 4096R/8E24F29D <bf@abenteuerland.at>
  *
  * This file is part of libhpxml.
  *
@@ -18,7 +18,7 @@
 /*! \file libhpxml.c
  * This file contains the complete source for the parser.
  * \author Bernhard R. Fischer, <bf@abenteuerland.at>
- * \date 2024/09/12
+ * \date 2025/03/14
  */
 
 #ifdef HAVE_CONFIG_H
@@ -185,6 +185,7 @@ int hpx_parse_attr_list(bstring_t *b, hpx_tag_t *t)
  */
 int hpx_process_elem(bstring_t b, hpx_tag_t *p)
 {
+   p->nattr = 0;
    if (b.len && (*b.buf != '<'))
    {
       p->type = HPX_LITERAL;

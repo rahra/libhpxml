@@ -150,7 +150,7 @@ enum | Description | Example
 `HPX_ATT` | Declarations.  `<! ..... >`
 `HPX_INSTR` | Instructions.  `<? .... ?>`
 `HPX_COMMENT` | Comments.   `<!-- .... -->`
-`HPX_CDATA` | CDATA.  `<[CDATA[ .... ]]>`
+`HPX_CDATA` | CDATA.  `<![CDATA[ .... ]]>`
 
 ```C
    hpx_tag_t *hpx_tm_create(int n);
