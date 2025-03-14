@@ -1,4 +1,4 @@
-/* Copyright 2011-2024 Bernhard R. Fischer, 4096R/8E24F29D <bf@abenteuerland.at>
+/* Copyright 2011-2025 Bernhard R. Fischer, 4096R/8E24F29D <bf@abenteuerland.at>
  *
  * This file is part of libhpxml.
  *
@@ -18,7 +18,7 @@
 /*! \file libhpxml.h
  * This file contains all declarations and prototypes for libhpxml.
  * \author Bernhard R. Fischer, <bf@abenteuerland.at>
- * \version 2024/08/29
+ * \version 2025/03/14
  */
 
 #ifndef HPXML_H
@@ -95,7 +95,7 @@ typedef struct hpx_tree
 
 enum
 {
-   HPX_ILL, HPX_OPEN, HPX_SINGLE, HPX_CLOSE, HPX_LITERAL, HPX_ATT, HPX_INSTR, HPX_COMMENT, HPX_CDATA
+   HPX_ILL, HPX_OPEN, HPX_SINGLE, HPX_CLOSE, HPX_LITERAL, HPX_ATT, HPX_INSTR, HPX_COMMENT, HPX_CDATA, _HPX_LAST
 };
 
 
@@ -111,6 +111,9 @@ int hpx_get_elem(hpx_ctrl_t *ctl, bstring_t *b, int *in_tag, long *lno);
 long hpx_get_eleml(hpx_ctrl_t *ctl, bstringl_t *b, int *in_tag, long *lno);
 int hpx_fprintf_tag(FILE *f, const hpx_tag_t *p);
 int hpx_tree_resize(hpx_tree_t **tl, int n);
+
+int fprint_hpx_attr(FILE *, const hpx_attr_t *, int );
+int fprint_hpx_tag(FILE *, const hpx_tag_t *);
 
 #endif
 

@@ -779,3 +779,65 @@ int hpx_tree_resize(hpx_tree_t **tl, int n)
    return t->msub;
 }
 
+
+/*! This function outputs the list of attributes to the stream.
+ * \param stream Stream of type FILE.
+ * \param attr Pointer to the attribute list.
+ * \param nattr Number of attributes in the attribute list.
+ * \return Returns the number of bytes writte to stream as described in
+ * fprintf(3). If an output error occurs after some bytes have already been
+ * written to the stream, this number of bytes is returned. If the error occurs
+ * immediately, a negative value is returned (see fprintf(3)).
+ * \note Please note that this function outputs the attributes as they are. It
+ * does not check for their validity which includes the delimiter, and it does
+ * not escape the strings in any way. This must be accomlished by the caller.
+ */
+int fprint_hpx_attr(FILE *stream, const hpx_attr_t *attr, int nattr)
+{
+   int ret, res;
+
+   for (res = 0; nattr > 0; nattr--, attr++, res += ret)
+      if ((ret = fprintf(stream, " %.*s=%c%.*s%c", attr->name.len, attr->name.buf, attr->delim, attr->value.len, attr->value.buf, attr->delim)) < 0)
+         return res ? res : ret;
+
+   return res;
+}
+
+
+static const char *open_str_[] = {"", "<", "<", "</", "", "<!", "<?", "<!--", "<[CDATA["};
+static const char *close_str_[] = {"", ">", "/>", ">", "", ">", "?>", "-->", "]]>"};
+
+
+/*! This function outputs a complete tag in XML format. See also fprint_attr()
+ * above for more information about the return value ans see the note there.
+ * \param stream Stream of type FILE.
+ * \param tag Pointer to a valid hpx_tag_t.
+ * \return See fprint_attr() above for information about the return value.
+ */
+int fprint_hpx_tag(FILE *stream, const hpx_tag_t *tag)
+{
+   int ret, res = 0;
+
+   if (tag->type <= HPX_ILL || tag->type >= _HPX_LAST)
+      return 0;
+
+   if ((ret = fprintf(stream, "%s%.*s", open_str_[tag->type], tag->tag.len, tag->tag.buf)) < 0)
+      return ret;
+
+   res += ret;
+   if ((ret = fprint_hpx_attr(stream, tag->attr, tag->nattr)) < 0)
+      return res;
+
+   res += ret;
+   if ((ret = fprintf(stream, "%s", close_str_[tag->type])) < 0)
+      return res;
+
+   res += ret;
+   if (tag->type != HPX_LITERAL && tag->type != HPX_OPEN)
+      if ((ret = fprintf(stream, "\n")) < 0)
+         return res;
+
+   res += ret;
+   return res;
+}
+
