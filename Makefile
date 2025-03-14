@@ -1,4 +1,4 @@
-#/* Copyright 2011-2024 Bernhard R. Fischer, 4096R/8E24F29D <bf@abenteuerland.at>
+#/* Copyright 2011-2025 Bernhard R. Fischer, 4096R/8E24F29D <bf@abenteuerland.at>
 # *
 # * This file is part of libhpxml.
 # *
@@ -16,19 +16,17 @@
 # */
 
 CC			= gcc
-CFLAGS	= -Wall -Isrc
-SVNVER	= 1.1.0
+CFLAGS	= -Wall -Isrc -O2
+SVNVER	= 1.2.0
 DISTDST	= libhpxml-r$(SVNVER)
 
-all: example example2
+all: example example2 xml2xml
 
 example: example.o libhpxml.a
 
-example.o: example.c
-
 example2: example2.o libhpxml.a
 
-example2.o: example.c
+xml2xml: xml2xml.o libhpxml.a
 
 libhpxml.a:
 	make -C src
