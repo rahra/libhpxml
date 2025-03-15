@@ -2,12 +2,14 @@
 
 Libhpxml is a high performance XML stream parser library written in C with a simple API. 
 
+Document version: 2025/03/15
+
 ## Description
 
 Libhpxml is a high performance XML stream parser library written in C with a
 simple API. It is intended to parse XML files very speed efficient. This may be
-required when processing huge XML files like the OSM planet file which
-currently has 260GB+.
+required when processing huge XML files like the OSM data files which may have
+several 100 GBytes or even TBytes.
 The development goals are **speed efficiency** and **simple memory handling** to
 reduce the risk of memory leaks. These objectives are achieved through
 
@@ -18,7 +20,7 @@ reduce the risk of memory leaks. These objectives are achieved through
 Being a stream parser, libhpxml returns in a loop one XML element after the
 other. It uses a result buffer which is initialized once and then reused for
 every element. Thus, repeated calls to `malloc(3)` and `free(3)` are omitted. The
-input data is read in blocks. The result buffer does not contain the data
+input data is memory mapped or read in blocks. The result buffer does not contain the data
 itself but just pointers to the XML elements within the input buffer. Thus,
 data is not copied, it is just pointed to.
 
@@ -27,7 +29,7 @@ data is not copied, it is just pointed to.
 ### Initialization
 
 libhpxml provides a set of functions and structures. `hpx_ctrl_t` is a control
-structure which contains all relevant information for a XML stream. The
+structure which contains all relevant information for the XML stream. The
 contents of the structure are used internally by the library and should not be
 modified in any way. The structure is initialized with a call to `hpx_init()` and
 must be freed again with `hpx_free()`. Note that `hpx_free()` will not close the
@@ -38,22 +40,25 @@ file descriptor.
    void hpx_free(hpx_ctrl_t *ctl);
 ```
 
-The arguments to `hpx_init()` is a file descriptor to an open XML file and the
+The arguments to `hpx_init()` are a file descriptor to an open XML file and the
 length of the block buffer. It will initialize a `hpx_ctrl_t` structure and
 returns a pointer to it. In case of error NULL is returned and errno is set
-appropriately. The buffer size must be at least as large as the longest XML
-element in the file but it is recommended to be much larger. The larger the
-buffer the lesser the number of reads. If there is enough system memory
-available, it is safe to choose 100MB or even more.
+appropriately. If len is a positive value, data is squentially pulled into
+memory in blocks by repeated calls to read(3).  The buffer size must be at
+least as large as the longest XML element in the file but it is recommended to
+be much larger. The larger the buffer the lesser the number of reads. If there
+is enough system memory available, it is safe to choose 100MB or even more. If
+len is a negative value, the data file will be memory mapped into the process
+memory (see Memory Mapping below).
 
 ### Memory Mapping
 
-Libhpxml now supports memory mapping through the system call `mmap(2)`. This is
-activated if `hpx_init()` is called with a negative len parameter. In case of
-memory mapping, len must be as long as the (negative value) of the total length
-of the XML input file. Memory mapping of files greater than 2 GB is currently
-just supported on 64 bit architectures (see manpage `mmap(2)` or POSIX manpage
-`mmap(3)`, respectively).
+Libhpxml supports memory mapping through the system call `mmap(2)`. Nowadays,
+this is the recommended way to access data.  Memory mapping is used if `hpx_init()`
+is called with a negative len parameter. In case of memory mapping, len must be
+as long as the (negative value) of the total length of the XML input file.
+Memory mapping of files greater than 2 GB is only supported on 64 bit
+architectures (see manpage `mmap(2)` or POSIX manpage `mmap(3)`, respectively).
 
 The main application for memory mapping is if libhpxml is not just used as
 stream parser but XML objects are kept in memory during the whole runtime. This
@@ -75,10 +80,10 @@ compile libhpxml with `mmap(2)` support. If it was not compiled with `WITH_MMAP`
 While parsing an XML file libhpxml returns pointers to the elements and
 attributes. C strings are usually '\0'-terminated but this is not applicable
 here because it would require that '\0' characters are inserted after each
-element, resulting in huge data movement. Thus, libhpxml uses "B strings" which
-are hold in the `bstring_t` structure. The structure contains a pointer to the
-string and its length. Additionally, a set of function is provided to handle
-those strings.
+element or data is to be copied, both resulting in huge data movement. Thus,
+libhpxml uses "B strings" which are hold in the `bstring_t` structure. The
+structure contains a pointer to the string and its length. Additionally, a set
+of function is provided to handle those strings.
 
 ```C
    typedef struct bstring
@@ -98,7 +103,7 @@ retrieved by repeated calls to hpx_get_elem().
 ```
 
 The function processes the buffer and fills out the bstring pointing to the
-next XML element. ctl is the pointer to control structure. `in_tag` is filled
+next XML element. ctl is the pointer to the control structure. `in_tag` is filled
 with either 0 or 1, either if the XML element is a tag (<...>) or if it is
 literal text between tags. lno is filled with the line number at which this
 element starts. Both, `in_tag` and `lno` may be `NULL` if it is not used.
@@ -128,15 +133,18 @@ error. Such an element can now be parsed with a call to `hpx_process_elem()`.
 It takes a bstring which contains an XML element and parses it into the
 `hpx_tag_t` structure. This structure may be initialized using `hpx_tm_create()`
 but it may also be initialized manually. In the latter case the structure
-member mattr must contain the size of the attribute array. Otherwise the
-program may segfault. The argument to `hpx_tm_create()` is the maximum number of
-expected attributes. The tag structure should be freed again with `hpx_tm_free()`
-after use. It is recommended to reuse the tag structure. This reduces
-unnecessary memory management system calls.
+member mattr must contain the size of the attribute array, i.e. the maximum
+number of elements. Otherwise the program may segfault. The argument to
+`hpx_tm_create()` is the maximum number of expected attributes. The tag
+structure should be freed again with `hpx_tm_free()` after use. It is
+recommended to reuse the tag structure. This reduces unnecessary memory
+management system calls.
+
 Please note that a call to `hpx_get_elem()` may invalidate the pointers within
-previously filled-out tag structures because it might read in the next block of
-the input file. Thus, the tag must be processed before the next call to
-`hpx_get_elem()`.
+previously filled-out tag structures if not memory mapping is used because it
+might read in the next block of the input file. Thus, the tag must be processed
+before the next call to `hpx_get_elem()`.
+
 The type member of `hpx_tag_t` defines the type this XML element. Currently,
 the following types are known.
 
@@ -233,7 +241,7 @@ does not exhaust it).
 
 ## Author
 
-libhpxml is developed and maintained by Bernhard R. Fischer, 4096R/8E24F29D <bf@abenteuerland.at>.
+Libhpxml is developed and maintained by Bernhard R. Fischer, 4096R/8E24F29D <bf@abenteuerland.at>.
 
 ## License
 
