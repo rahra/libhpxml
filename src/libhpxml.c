@@ -804,7 +804,7 @@ int fprint_hpx_attr(FILE *stream, const hpx_attr_t *attr, int nattr)
 }
 
 
-static const char *open_str_[] = {"", "<", "<", "</", "", "<!", "<?", "<!--", "<[CDATA["};
+static const char *open_str_[] = {"", "<", "<", "</", "", "<!", "<?", "<!--", "<![CDATA["};
 static const char *close_str_[] = {"", ">", "/>", ">", "", ">", "?>", "-->", "]]>"};
 
 
