@@ -374,19 +374,19 @@ int cblank(const char *c, long *lno)
 int count_tag(bstringl_t b, long *lno)
 {
 #define HPX_DOCTYPE 0x100
-   int i, c = HPX_ILL, sqcnt = 0, d;
+   int i = 0, c = HPX_ILL, sqcnt = 0, d;
 
    // manage comments
    if ((b.len >= 7) && !strncmp(b.buf + 1, "!--", 3))
-      c = HPX_COMMENT;
+      c = HPX_COMMENT, i = 4;
    // manage CDATA
    if ((b.len >= 12) && !strncmp(b.buf + 1, "![CDATA[", 8))
-      c = HPX_CDATA;
+      c = HPX_CDATA, i = 9;
    // manage DOCTYPE sub entities
    if ((b.len >= 10) && !strncasecmp(b.buf + 1 , "!DOCTYPE", 8) && (isspace(b.buf[9]) || (b.buf[9] == '>')))
-      c = HPX_DOCTYPE;
+      c = HPX_DOCTYPE, i = 9;
 
-   for (i = 0, d = 0; i < b.len; i++, b.buf++)
+   for (b.buf += i, d = 0; i < b.len; i++, b.buf++)
    {
       // check for string delimiter if outside of delimited string
       if (!d)
