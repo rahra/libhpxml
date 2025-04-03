@@ -18,7 +18,7 @@
 /*! \file libhpxml.c
  * This file contains the complete source for the parser.
  * \author Bernhard R. Fischer, <bf@abenteuerland.at>
- * \date 2025/03/14
+ * \date 2025/04/03
  */
 
 #ifdef HAVE_CONFIG_H
@@ -70,6 +70,22 @@ int skip_bblank(bstring_t *b)
 {
    for (; isspace((unsigned) *b->buf) && b->len; bs_advance(b));
    return b->len;
+}
+
+
+/*! Test if character c is XML string delimiter ["'] and return it.
+ * @param c Character to test.
+ * @return If c is one of ["'] return it, otherwise 0 is returned.
+ */
+int is_delim(char c)
+{
+   switch (c)
+   {
+      case '"':
+      case '\'':
+         return c;
+   }
+   return 0;
 }
 
 
@@ -358,7 +374,7 @@ int cblank(const char *c, long *lno)
 int count_tag(bstringl_t b, long *lno)
 {
 #define HPX_DOCTYPE 0x100
-   int i, c = HPX_ILL, sqcnt = 0;
+   int i, c = HPX_ILL, sqcnt = 0, d;
 
    // manage comments
    if ((b.len >= 7) && !strncmp(b.buf + 1, "!--", 3))
@@ -370,11 +386,18 @@ int count_tag(bstringl_t b, long *lno)
    if ((b.len >= 10) && !strncasecmp(b.buf + 1 , "!DOCTYPE", 8) && (isspace(b.buf[9]) || (b.buf[9] == '>')))
       c = HPX_DOCTYPE;
 
-   for (i = 0; i < b.len; i++, b.buf++)
+   for (i = 0, d = 0; i < b.len; i++, b.buf++)
    {
+      // check for string delimiter if outside of delimited string
+      if (!d)
+         d = is_delim(*b.buf);
+      // check for end delimiter if inside of a delimited string
+      else if (d == is_delim(*b.buf))
+         d = 0;
+
       if (*b.buf == '>')
       {
-         if (c == HPX_ILL)
+         if (c == HPX_ILL && !d)
             break;
          if ((c == HPX_COMMENT) && (i >= 7) && !strncmp(b.buf - 2, "--", 2))
             break;
